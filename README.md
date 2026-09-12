@@ -22,6 +22,7 @@ npm run test:all
 ```
 
 `test:all` is the complete local verification pipeline.
+**Live demo:** https://flam-adaptive-ads.vercel.app
 
 ## Architecture
 
