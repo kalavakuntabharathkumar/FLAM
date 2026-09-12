@@ -1,0 +1,2 @@
+import {it,expect} from 'vitest'; import {resolveLayout} from '../../src/resolver/resolver'; import {adSpec} from '../../src/spec/adSpec'; import {surfaces} from '../../src/surfaces/surfaces';
+it('preserves product image aspect ratio',()=>{for(const s of surfaces){const l=resolveLayout(adSpec,s);const p=l.elements.find(e=>e.id==='product-image');if(p?.visible)expect(Math.abs(p.width/p.height-1.35)).toBeLessThan(.09)}});
