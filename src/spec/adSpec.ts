@@ -80,7 +80,7 @@ export const adSpec = defineAd({
       id: 'price',
       type: 'text',
       role: 'secondary',
-      content: '₹40,0000000000000',
+      content: '₹4,999',
       priority: 2,
       minWidth: 72,
       minHeight: 24,
@@ -129,11 +129,15 @@ export const adSpec = defineAd({
       preferredWidth: 110,
       preferredHeight: 34,
       flexibility: {
-        resize: true,
-        reposition: true,
-        truncate: false,
-        droppable: true,
-      },
+      resize: true,
+      reposition: true,
+      truncate: false,
+      droppable: true,
+    },
+    // Matches .ad-element.logo's actual rendered text color (color:#fff
+    // in styles.css / '#ffffff' fillStyle in renderCanvas.ts). See
+    // broadcastLowerThird's backgroundColor in surfaces.ts.
+    foregroundColor: '#ffffff',
     },
   ],
 });

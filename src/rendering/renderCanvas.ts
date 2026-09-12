@@ -2,6 +2,42 @@ import type { ResolvedLayout } from '../types/layout';
 import type { AdSpecification } from '../types/ad';
 
 /**
+ * Returns the longest prefix of `text` (plus a trailing ellipsis) that fits
+ * within `maxWidthPx` at the context's currently-set font, using the
+ * context's own real `measureText` — the Canvas equivalent of what
+ * `renderDom.ts`'s `truncateCharacterCount` does via a hidden canvas probe
+ * for the DOM backend. Because this runs on the same context the glyphs
+ * are actually drawn with, it is exact rather than heuristic.
+ */
+function truncateToWidth(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidthPx: number,
+): string {
+  if (ctx.measureText(text).width <= maxWidthPx) {
+    return text;
+  }
+
+  let low = 0;
+  let high = text.length;
+  let best = 0;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const candidate = text.slice(0, mid).trimEnd() + '…';
+
+    if (ctx.measureText(candidate).width <= maxWidthPx) {
+      best = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return text.slice(0, best).trimEnd() + '…';
+}
+
+/**
  * Canvas rendering backend.
  *
  * Consumes the exact same `ResolvedLayout` the DOM renderer
@@ -22,6 +58,18 @@ export function drawLayoutToCanvas(
   layout: ResolvedLayout,
   ad: AdSpecification,
   images: ReadonlyMap<string, HTMLImageElement> = new Map(),
+  /**
+   * Optional per-element alpha override (0-1), keyed by element id.
+   *
+   * Canvas has no CSS transitions, so animating a switch between two
+   * `ResolvedLayout`s (CanvasAdRenderer.tsx) works by having the caller
+   * redraw every rAF tick with interpolated `ResolvedElement` geometry
+   * plus a fade for elements that only exist on one side of the switch
+   * (e.g. branding dropping out). This map is how that fade is expressed
+   * without changing `ResolvedLayout`/`ResolvedElement` themselves — an
+   * element not present in the map draws fully opaque, exactly as before.
+   */
+  opacityOverrides: ReadonlyMap<string, number> = new Map(),
 ): void {
   const spec = (id: string) => ad.elements.find(e => e.id === id);
 
@@ -50,6 +98,7 @@ export function drawLayoutToCanvas(
     if (!s) continue;
 
     ctx.save();
+    ctx.globalAlpha = opacityOverrides.get(e.id) ?? 1;
 
     if (e.type === 'image' && e.role !== 'branding') {
       const img = images.get(s.content);
@@ -110,20 +159,49 @@ export function drawLayoutToCanvas(
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const lineHeight = (e.fontSize ?? 16) * (e.lineHeight ?? 1.2);
-      const words = (e.text ?? '').split(' ');
-      let line = '';
-      let y = e.y;
-      for (const word of words) {
-        const test = line ? `${line} ${word}` : word;
-        if (ctx.measureText(test).width > e.width && line) {
+      const text = e.text ?? '';
+
+      if (e.truncated) {
+        // The resolver has explicitly decided this element must render as
+        // a single truncated line (matching renderDom.ts's displayText()
+        // behavior for the DOM backend). Binary-search the longest prefix
+        // that fits e.width at the resolved font, then append an ellipsis,
+        // so the Canvas backend never draws more than the one line the
+        // resolver actually sized the box for.
+        ctx.fillText(truncateToWidth(ctx, text, e.width), e.x, e.y, e.width);
+      } else {
+        // Normal (non-truncated) text: wrap by word, but never draw more
+        // lines than the resolved box height can hold. The resolver
+        // already guarantees enough height for the untruncated content at
+        // this font size, so this cap is a defensive backstop — it keeps
+        // the Canvas backend from ever painting past its own element's
+        // box (and into a sibling element) even if that guarantee were
+        // ever violated, mirroring the DOM renderer's implicit box
+        // clipping via `overflow` behavior.
+        const maxLines = Math.max(1, Math.floor(e.height / lineHeight));
+        const words = text.split(' ');
+        let line = '';
+        let y = e.y;
+        let linesDrawn = 0;
+
+        for (const word of words) {
+          const test = line ? `${line} ${word}` : word;
+
+          if (ctx.measureText(test).width > e.width && line) {
+            if (linesDrawn >= maxLines) break;
+            ctx.fillText(line, e.x, y, e.width);
+            linesDrawn += 1;
+            line = word;
+            y += lineHeight;
+          } else {
+            line = test;
+          }
+        }
+
+        if (line && linesDrawn < maxLines) {
           ctx.fillText(line, e.x, y, e.width);
-          line = word;
-          y += lineHeight;
-        } else {
-          line = test;
         }
       }
-      if (line) ctx.fillText(line, e.x, y, e.width);
     }
 
     ctx.restore();

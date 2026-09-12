@@ -1,8 +1,26 @@
-import {it,expect} from 'vitest'; import {resolveLayout} from '../../src/resolver/resolver'; import {adSpec} from '../../src/spec/adSpec'; import {surfaces} from '../../src/surfaces/surfaces';
-it('never overlaps visible elements',()=>{for(const s of surfaces){const l=resolveLayout(adSpec,s);const v=l.elements.filter(e=>e.visible);for(let i=0;i<v.length;i++)for(let j=i+1;j<v.length;j++)expect(v[i].x>=v[j].x+v[j].width||v[j].x>=v[i].x+v[i].width||v[i].y>=v[j].y+v[j].height||v[j].y>=v[i].y+v[i].height).toBe(true)}});
+import { describe, it, expect } from 'vitest';
+import { resolveLayout } from '../../src/resolver/resolver';
+import { adSpec } from '../../src/spec/adSpec';
+import { surfaces } from '../../src/surfaces/surfaces';
 
+it('never overlaps visible elements', () => {
+  for (const s of surfaces) {
+    const l = resolveLayout(adSpec, s);
+    const v = l.elements.filter(e => e.visible);
 
-import { describe } from 'vitest';
+    for (let i = 0; i < v.length; i++) {
+      for (let j = i + 1; j < v.length; j++) {
+        const noOverlap =
+          v[i].x >= v[j].x + v[j].width ||
+          v[j].x >= v[i].x + v[i].width ||
+          v[i].y >= v[j].y + v[j].height ||
+          v[j].y >= v[i].y + v[i].height;
+
+        expect(noOverlap).toBe(true);
+      }
+    }
+  }
+});
 
 describe('composition vertical balance', () => {
   it('keeps a sparse composition centered inside the safe area', () => {
@@ -46,15 +64,17 @@ describe('composition vertical balance', () => {
     expect(headline.fontSize).toBeGreaterThan(34);
   });
 
-  it('does not regrow elements that have no declared growth ceiling (price stays put on the kiosk)', () => {
+  it('does not regrow elements that have no declared growth ceiling (price stays at its preferred size on the kiosk)', () => {
     const kiosk = surfaces.find(s => s.width === 1080 && s.height === 1080)!;
     const layout = resolveLayout(adSpec, kiosk);
     const price = layout.elements.find(e => e.id === 'price' && e.visible)!;
 
     // price/CTA deliberately have no maxWidth/maxHeight/maxFontSize, so
-    // they must stay at their original preferred size even on a
-    // surface with abundant spare room.
-    expect(price.fontSize).toBe(20);
+    // they must stay at their declared preferredFontSize (28, see
+    // adSpec.ts) even on a surface with abundant spare room — never
+    // shrinking (there's plenty of space) and never growing past it
+    // (no growth ceiling is declared).
+    expect(price.fontSize).toBeCloseTo(28, 1);
   });
 
   it('does not regress mobileLandscape hero image size (the redistribution regression caught during development)', () => {

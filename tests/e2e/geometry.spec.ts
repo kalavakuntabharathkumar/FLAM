@@ -5,6 +5,7 @@ const surfaces = [
   'Mobile Landscape',
   'Broadcast Lower Third',
   'Retail Kiosk',
+  'Compact Widget',
   'Unknown 713 × 287',
 ];
 

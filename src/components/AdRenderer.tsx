@@ -124,8 +124,36 @@ export function AdRenderer({
           data-height={layout.height}
           data-scale={scale}
         >
-          {layout.elements
+          {/*
+           * Stable DOM order, not resolver output order.
+           *
+           * The resolver is free to return `layout.elements` in whatever
+           * order a given composition family happened to place them in
+           * (vertical/horizontal/mixed can each produce a different
+           * internal ordering for the same element set). If this list is
+           * mapped in *that* order, switching surfaces can reorder the
+           * <div> children in the DOM even though their `key`s are
+           * unchanged. A same-key-different-position update still gets
+           * reconciled by React, but the DOM move happens in the same
+           * commit as the style change — in practice this reads as the
+           * CSS transition being skipped ("blinking") for exactly the
+           * elements whose sibling order shifted, rather than a smooth
+           * left/top/width/height interpolation.
+           *
+           * Sorting by each element's fixed position in the original ad
+           * spec keeps sibling order identical across every surface and
+           * every composition, so only style values change on relayout —
+           * which is what .ad-element's CSS transitions can actually
+           * animate. Visual stacking is unaffected because it's driven by
+           * `zIndex` in `elementStyle()`, not DOM order.
+           */}
+          {[...layout.elements]
             .filter(e => e.visible)
+            .sort(
+              (a, b) =>
+                ad.elements.findIndex(s => s.id === a.id) -
+                ad.elements.findIndex(s => s.id === b.id),
+            )
             .map(e => {
               const s =
                 spec(e.id);

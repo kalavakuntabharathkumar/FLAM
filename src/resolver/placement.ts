@@ -11,21 +11,37 @@ import {
   usefulWidth,
 } from './constraints';
 
-interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+interface Rect { x: number; y: number; width: number; height: number;}
 
-const gapFor = (surface: SurfaceProfile) =>
-  Math.max(
-    8,
+/**
+ * Far-viewing-distance surfaces (e.g. broadcast lower-thirds, viewed from
+ * across a room) need more breathing room between elements than near-field
+ * surfaces of the same pixel size — visual clutter reads worse from a
+ * distance even when individual glyphs are already large enough
+ * (`minTextSize` already governs glyph size independently; this governs
+ * spacing, a genuinely separate legibility constraint).
+ *
+ * This is the first read of `SurfaceProfile.viewingDistance` anywhere in
+ * the resolver. It only changes the floor/ceiling of the existing gap
+ * formula for 'far' surfaces — 'near' surfaces (every other shipped
+ * surface) compute byte-for-byte the same gap as before.
+ */
+const VIEWING_DISTANCE_GAP_MULTIPLIER: Record<SurfaceProfile['viewingDistance'], number> = {
+  near: 1,
+  far: 1.75,
+};
+
+const gapFor = (surface: SurfaceProfile) => {
+  const multiplier = VIEWING_DISTANCE_GAP_MULTIPLIER[surface.viewingDistance];
+
+  return Math.max(
+    8 * multiplier,
     Math.min(
-      20,
-      Math.min(surface.width, surface.height) * 0.025,
+      20 * multiplier,
+      Math.min(surface.width, surface.height) * 0.025 * multiplier,
     ),
   );
+};
 
 const safeRect = (surface: SurfaceProfile): Rect => ({
   x: surface.safeArea.left,
@@ -88,7 +104,6 @@ function naturalTextWidth(
     TEXT_ESTIMATE_SAFETY_FACTOR
   );
 }
-
 
 /**
  * Allocates the normal useful width while ensuring that a long text token
@@ -306,17 +321,14 @@ function isTextLike(spec: AdElementSpec): boolean {
 }
 
 /**
- * Shrinks a stack of element heights to fit the available space.
+ * Shrinks element heights to fit the available space.
  *
- * Text (and branding-image, which renders as text) elements give up their
- * spare room first, since font size can absorb the loss gracefully. Among
- * remaining candidates, elements with the most spare capacity go first,
- * then lower priority before higher.
+ * Text and branding-image elements give up spare room first.
+ * Remaining elements are reduced by highest spare capacity,
+ * then lower priority before higher priority.
  *
- * This is the single shared redistribution pass used by both the vertical
- * stack and each column of the mixed composition — previously this ~80
- * line loop was duplicated once per caller with only variable names
- * changed, so a fix to the ordering rule had to be made twice.
+ * Shared by both vertical stacks and mixed-composition columns
+ * to avoid duplicating the same redistribution logic.
  */
 function redistributeExcessHeight(
   items: AdElementSpec[],
@@ -484,16 +496,12 @@ function placeVertical(
 
       out.push(element);
 
-      /*
-       * Advance by the element's actual resolved height, not the allocated
-       * box height (`heights[i]`). A text element's allocated box can be
-       * taller than the font it actually fits at (e.g. an element asking
-       * up to `maxFontSize` but landing narrower), and buildElement's
-       * fitTextFontSize returns that tighter real height. Advancing by the
-       * allocated box instead of the real height leaves silent dead space
-       * between this element and the next one, which the validator's
-       * spacing check correctly flags.
-       */
+          /*
+      * Advance by the element's actual resolved height, not its allocated
+      * box height, to avoid unnecessary gaps. Text elements may resolve
+      * to a smaller height, and using the allocated height can cause
+      * spacing validation failures between elements.
+      */
       y +=
         element.height +
         (i < active.length - 1
@@ -549,9 +557,9 @@ function placeHorizontal(
   }
 
   let widths = active.map(
-    e =>
+    (e, i) =>
       Math.max(
-        mins[active.indexOf(e)],
+        mins[i],
         allocationWidth(
           e,
           available,
@@ -718,20 +726,16 @@ function placeMixed(
   const gap = gapFor(surface);
 
   if (active.length < 2) {
-    return placeVertical(
-      active,
-      surface,
-      trunc,
-    );
+    return placeVertical(active,surface,trunc);
   }
 
   /*
-   * Generic mixed composition: partition by content geometry,
-   * not by surface identity.
-   *
-   * Branding remains on the non-image side because its previous `logo`
-   * representation was text-like in the existing layout engine.
-   */
+ * Generic mixed composition: partition by content geometry,
+ * not surface identity.
+ *
+ * Branding stays on the non-image side because its existing
+ * representation is text-like in the layout engine.
+ */
   const left = active.filter(
     e =>
       e.type === 'image' &&
@@ -949,11 +953,9 @@ function placeMixed(
           out.push(built);
 
           /*
-           * Advance by the actual resolved height (see the matching note
-           * in placeVertical) rather than the allocated box height `h`,
-           * so a text box asking up to maxFontSize but landing tighter
-           * doesn't leave dead space before the next item in the column.
-           */
+ * Advance by the actual resolved height, not the allocated height `h`,
+ * so tighter text boxes don't leave unnecessary space before the next item.
+ */
           y +=
             built.height +
             (i < group.length - 1
@@ -1016,14 +1018,10 @@ function verticallyBalanceComposition(
 }
 
 /**
- * Builds a placeholder entry for an element the degradation pass has
- * dropped.
+ * Builds a placeholder for an element dropped during degradation.
  *
- * Dropped elements are still represented in the resolved output, marked
- * `visible: false`, instead of disappearing from the array entirely.
- * Renderers, the debug view, and the validator all key off `visible` to
- * decide what to show or check — if a dropped element were simply absent
- * from the array, none of them could ever report that a drop happened.
+ * Dropped elements remain in the resolved output with `visible: false`,
+ * allowing renderers, debug views, and validators to detect and handle them.
  */
 function droppedPlaceholder(
   spec: AdElementSpec,
@@ -1041,12 +1039,10 @@ function droppedPlaceholder(
     priority: spec.priority,
   };
 }
-
 /**
- * Safe-area corners tried, in preference order, for a repositioned element.
- * Bottom-right is tried first because it is the least likely corner to
- * collide with a top-anchored headline or a centered hero image in the
- * compositions this engine produces.
+ * Safe-area corners tried for repositioning, in preference order.
+ * Bottom-right is preferred to reduce collisions with top-anchored
+ * headlines and centered hero images.
  */
 const OVERLAY_CORNERS = [
   'bottom-right',
@@ -1075,18 +1071,14 @@ function overlayRect(
 }
 
 /**
- * Places droppable + repositionable elements as corner-anchored overlays
- * outside the main content flow, instead of dropping them.
+ * Places droppable, repositionable elements as corner overlays
+ * outside the main content flow instead of dropping them.
  *
- * This is a genuine spatial degradation distinct from resize/truncate/hide:
- * the element keeps its content at its natural minimum footprint but is
- * pulled out of the linear flow and pinned to whichever safe-area corner it
- * can occupy without overlapping content the flow pass already placed.
+ * The element keeps its minimum footprint and uses a safe-area
+ * corner without overlapping existing flow content.
  *
- * This function never silently decides success or failure on its own — if
- * no corner is free it still returns a placed (visible) element at the
- * last-tried corner, so the caller's normal overlap validation is the single
- * source of truth for whether the reposition attempt actually worked.
+ * If no corner is free, the last attempt is returned visible;
+ * normal overlap validation determines whether repositioning succeeded.
  */
 function placeOverlays(
   elements: AdElementSpec[],

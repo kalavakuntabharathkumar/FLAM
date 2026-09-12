@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test('extreme price stays inside its resolved box without browser clipping', async ({ page }) => {
-  await page.goto('/');
+  // ?stress=price swaps in a deliberately extreme, comma-malformed,
+  // no-whitespace price string (see App.tsx's withStressContent) so this
+  // test drives real extreme content through the real rendered DOM,
+  // independent of whatever price the default demo happens to show.
+  await page.goto('/?stress=price');
   await page.getByRole('button', { name: /Broadcast Lower Third/ }).click();
 
   const price = page.locator('[data-element="price"]');

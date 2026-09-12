@@ -291,69 +291,6 @@ export function fitTextFontSize(
   return best;
 }
 
-export function minimumFor(
-  spec: AdElementSpec,
-  surface: SurfaceProfile,
-  width: number,
-) {
-  if (spec.type === 'button') {
-    const target = surface.touchOnly
-      ? surface.minTapTarget
-      : 0;
-
-    return {
-      width: Math.max(
-        spec.minWidth,
-        target,
-      ),
-      height: Math.max(
-        spec.minHeight,
-        target,
-      ),
-    };
-  }
-
-  if (
-    spec.type === 'text' ||
-    (spec.type === 'image' && spec.role === 'branding')
-  ) {
-    const fs = Math.max(
-      spec.text?.minFontSize ??
-        surface.minTextSize,
-      surface.minTextSize,
-    );
-
-    const measured = estimateText(
-      spec,
-      width,
-      surface,
-      fs,
-      spec.text?.maxLines,
-    );
-
-    return {
-      width: spec.minWidth,
-      height: Math.max(
-        spec.minHeight,
-        measured.height,
-      ),
-    };
-  }
-
-  const ratio = Math.max(
-    0.01,
-    spec.image?.aspectRatio ?? 1,
-  );
-
-  return {
-    width: spec.minWidth,
-    height: Math.max(
-      spec.minHeight,
-      spec.minWidth / ratio,
-    ),
-  };
-}
-
 export function usefulWidth(
   spec: AdElementSpec,
   available: number,

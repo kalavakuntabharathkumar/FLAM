@@ -4,7 +4,9 @@
 .resolution-error span{font-size:13px;color:#c99;line-height:1.4}
 .ad-frame,.ad-viewport{transition:width .36s cubic-bezier(.22,1,.36,1),height .36s cubic-bezier(.22,1,.36,1),transform .36s cubic-bezier(.22,1,.36,1)}
 .ad-element{transition:left .3s cubic-bezier(.22,1,.36,1),top .3s cubic-bezier(.22,1,.36,1),width .3s cubic-bezier(.22,1,.36,1),height .3s cubic-bezier(.22,1,.36,1),font-size .3s cubic-bezier(.22,1,.36,1)}
-@media(prefers-reduced-motion:reduce){.ad-frame,.ad-viewport,.ad-element{transition:none}}
+@media(prefers-reduced-motion:reduce){.ad-frame,.ad-viewport,.ad-element{transition:none}.ad-element{animation:none}}
+.ad-element{animation:ad-element-enter .32s cubic-bezier(.22,1,.36,1)}
+@keyframes ad-element-enter{from{opacity:0}to{opacity:1}}
 .renderer-toggle{display:flex;gap:8px;margin-bottom:20px}
 .renderer-toggle button{background:#18191e;border:1px solid #303139;color:#ddd;border-radius:999px;padding:8px 16px;font-size:12px;cursor:pointer}
 .renderer-toggle button.active{border-color:#d8d8de;background:#24252b}

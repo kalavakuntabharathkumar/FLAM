@@ -103,7 +103,7 @@ export function validate(
           spec.role === 'branding'
         )
       ) &&
-      (e.fontSize ?? 0) <
+      (e.fontSize ?? 0) < 
         Math.max(
           surface.minTextSize,
           spec.text?.minFontSize ?? 0,
