@@ -33,6 +33,34 @@ All three composition families are generated unconditionally for every surface a
 
 The mixed composition partitions image content from non-image content; it does not inspect any surface identity.
 
+### 3.1 Why Mobile Portrait and Mobile Landscape both resolve to `vertical`
+
+Both mobile surfaces land on the same composition family, but for different, independently-computed reasons — this is a coincidence of the scoring outcome, not a shortcut in the resolver. The clearest case to trace is Mobile Landscape (`480 × 320`), because `mixed` is genuinely competitive there before it fails validation.
+
+At the demo spec's full priority (5 elements, nothing hidden or truncated):
+
+- Safe rect: `x:16, y:14, width:448, height:292` (safe area 16/16 horizontal, 14/14 vertical)
+- Gap: `8px` (near viewing distance)
+- `placeMixed` splits elements into `left = [product-image]` and `right = [headline, cta, price, logo]`
+- `minLeft = 80` (product-image's minWidth), `minRight = 110` (headline's minWidth, the largest of the four "right" minimums)
+- `usable = safe.width − gap = 440`
+- `leftPreferred = max(minLeft, min(usable − minRight, Σ left.maxWidth)) = max(80, min(330, 640)) = 330`
+- `rightWidth = usable − leftPreferred = 110`
+
+The image column gets 330px; all four right-column elements — including a 3-line headline — are squeezed into a single shared 110px-wide column. At that width, `fitTextFontSize` cannot keep the headline at or above its 16px minimum font size and it still overflows its box, producing two real validation failures: `BELOW_MIN_TEXT_SIZE` and `TEXT_CLIPPING`.
+
+Measured against the actual demo spec and surface profile (values from an instrumented run of the real resolver code, not estimated):
+
+| Composition | valid | visible | area efficiency | issues | score |
+|---|---|---|---|---|---|
+| vertical | true | 5 | 0.406 | 0 | 105,315.64 |
+| mixed | **false** | 5 | **0.829** | 2 | −14,642.06 |
+| horizontal | false | 0 | 0 | 4 | −40,000 |
+
+`mixed` is actually the more area-efficient candidate (~83% vs ~41% safe-area usage) — it is not a bad layout in terms of packing. It loses purely because `score()` in `resolver.ts` weights validity at 100,000 and penalizes each validation issue at −10,000, deliberately dwarfing the ~100-point efficiency term. This reflects the intended scoring hierarchy — a correct, non-clipping layout must always beat a tighter-packed but broken one — not a defect in `placeMixed`'s column-split math, which computed exactly what its own formula specifies.
+
+Mobile Portrait (`320 × 480`) resolves to vertical for an unrelated, simpler reason: at that aspect ratio there usually isn't enough width for two side-by-side columns to clear both columns' minimum widths in the first place, so `mixed` is rejected earlier in the same scoring process rather than via the specific 110px-column failure described above. Both surfaces still generate and evaluate all three composition candidates on every resolve — neither surface receives special-cased treatment.
+
 ## 4. Content-aware sizing
 
 Element boxes are bounded by minimum useful size and preferred useful size rather than arbitrary container-sized allocations. Text is measured at the exact candidate width that will be rendered, using a calibrated character-width heuristic — not real browser text measurement. The heuristic bakes in a safety margin so the resolver never under-allocates space relative to what actually renders.
