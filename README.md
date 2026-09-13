@@ -91,4 +91,4 @@ About 3 days, roughly 9 hours a day (~27 hours) on core implementation, plus an 
 
 ## AI disclosure
 
-I used AI for comments — writing and cleaning up the explanatory comments through the code — and separately to double check the documents (README/ARCHITECTURE) actually match what the code does, rather than trusting my own memory of what I'd written days earlier.
+I used ChatGPT for writing and cleaning up explanatory comments throughout the code, for help writing tests, and separately to verify that the documentation (README/ARCHITECTURE) actually matches what the code does — rather than relying on my own memory of what I'd written days earlier.
