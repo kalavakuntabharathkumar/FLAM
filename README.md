@@ -17,6 +17,7 @@ Open the localhost URL printed by Vite.
 
 ```bash
 npm run typecheck
+npm run lint
 npm run build
 npm run test
 npm run test:e2e
