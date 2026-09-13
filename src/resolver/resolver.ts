@@ -6,6 +6,7 @@ import { candidates } from './composition';
 import { place } from './placement';
 import { validate } from './validator';
 import { nextDegradation, nextReposition } from './degradation';
+import { validateSpecConstraints } from './constraints';
 
 function areaEfficiency(layout: ResolvedLayout): number {
   const visible = layout.elements.filter(e => e.visible);
@@ -180,6 +181,14 @@ export function resolveLayout(
     }
     seenIds.add(el.id);
   }
+
+  // Catches contradictory numeric constraints (e.g. minWidth > maxWidth,
+  // text.minFontSize > text.maxFontSize) that TypeScript's discriminated
+  // union cannot express as a compile-time error. Throws a clear, named
+  // error identifying the offending element and fields instead of letting
+  // the resolver silently mis-diagnose an authoring bug as ordinary space
+  // pressure and "fix" it via unrelated degradation.
+  validateSpecConstraints(ad.elements);
 
   const u = usable(surface.width, surface.height, surface.safeArea);
   if (u.width <= 0 || u.height <= 0) throw new Error('Surface safe area leaves no usable space.');

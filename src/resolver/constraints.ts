@@ -291,6 +291,89 @@ export function fitTextFontSize(
   return best;
 }
 
+/**
+ * Rejects ad specs whose declared numeric constraints are internally
+ * contradictory (e.g. `minWidth > maxWidth`), instead of letting them pass
+ * through silently.
+ *
+ * Before this existed, a contradictory spec was NOT caught anywhere:
+ * `usefulWidth`/`usefulHeight` let a larger `min*` silently win over a
+ * smaller `max*`, and `fitTextFontSize`'s binary search just ran with
+ * `low > high` and returned whatever fell out. The resolver would then
+ * often report an `EXCESSIVE_ALLOCATION` validation issue for the affected
+ * element and "fix" it via ordinary degradation (hiding/truncating
+ * unrelated content) — silently mis-diagnosing an authoring bug in the
+ * spec as ordinary space pressure on the surface.
+ *
+ * This throws a specific, named error identifying exactly which element
+ * and which pair of fields are contradictory, so a bad spec fails loudly
+ * and immediately instead of producing confusing degradation elsewhere.
+ */
+export function validateSpecConstraints(elements: AdElementSpec[]): void {
+  for (const e of elements) {
+    const bad: string[] = [];
+
+    if (e.minWidth > e.preferredWidth) {
+      bad.push(`minWidth (${e.minWidth}) > preferredWidth (${e.preferredWidth})`);
+    }
+    if (e.minHeight > e.preferredHeight) {
+      bad.push(`minHeight (${e.minHeight}) > preferredHeight (${e.preferredHeight})`);
+    }
+    if (e.maxWidth !== undefined && e.minWidth > e.maxWidth) {
+      bad.push(`minWidth (${e.minWidth}) > maxWidth (${e.maxWidth})`);
+    }
+    if (e.maxHeight !== undefined && e.minHeight > e.maxHeight) {
+      bad.push(`minHeight (${e.minHeight}) > maxHeight (${e.maxHeight})`);
+    }
+    if (e.maxWidth !== undefined && e.preferredWidth > e.maxWidth) {
+      bad.push(`preferredWidth (${e.preferredWidth}) > maxWidth (${e.maxWidth})`);
+    }
+    if (e.maxHeight !== undefined && e.preferredHeight > e.maxHeight) {
+      bad.push(`preferredHeight (${e.preferredHeight}) > maxHeight (${e.maxHeight})`);
+    }
+    if ([e.minWidth, e.minHeight, e.preferredWidth, e.preferredHeight].some(n => n <= 0)) {
+      bad.push('minWidth/minHeight/preferredWidth/preferredHeight must all be > 0');
+    }
+
+    if (e.text) {
+      const { minFontSize, preferredFontSize, maxFontSize } = e.text;
+
+      if (minFontSize > preferredFontSize) {
+        bad.push(`text.minFontSize (${minFontSize}) > text.preferredFontSize (${preferredFontSize})`);
+      }
+      if (maxFontSize !== undefined && preferredFontSize > maxFontSize) {
+        bad.push(`text.preferredFontSize (${preferredFontSize}) > text.maxFontSize (${maxFontSize})`);
+      }
+      if (maxFontSize !== undefined && minFontSize > maxFontSize) {
+        bad.push(`text.minFontSize (${minFontSize}) > text.maxFontSize (${maxFontSize})`);
+      }
+      if (minFontSize <= 0) {
+        bad.push('text.minFontSize must be > 0');
+      }
+    }
+
+    if (e.type === 'image' && e.image) {
+      const { minWidth, minHeight, preferredWidth, preferredHeight, aspectRatio } = e.image;
+
+      if (aspectRatio <= 0) {
+        bad.push(`image.aspectRatio (${aspectRatio}) must be > 0`);
+      }
+      if (minWidth > preferredWidth) {
+        bad.push(`image.minWidth (${minWidth}) > image.preferredWidth (${preferredWidth})`);
+      }
+      if (minHeight > preferredHeight) {
+        bad.push(`image.minHeight (${minHeight}) > image.preferredHeight (${preferredHeight})`);
+      }
+    }
+
+    if (bad.length > 0) {
+      throw new Error(
+        `Invalid ad specification: element "${e.id}" has contradictory constraints — ${bad.join('; ')}.`,
+      );
+    }
+  }
+}
+
 export function usefulWidth(
   spec: AdElementSpec,
   available: number,

@@ -49,10 +49,17 @@ describe('degradation', () => {
     const headlineSpec = adSpec.elements.find(e => e.id === 'headline')!;
     const headline = layout.elements.find(e => e.id === 'headline');
 
-    if (headline?.fontSize && headline.fontSize < headlineSpec.text!.preferredFontSize - 0.01) {
-      expect(
-        layout.degradation.some(d => d.operation === 'resize' && d.elementId === 'headline'),
-      ).toBe(true);
-    }
+    // Assert the premise itself first: on this intentionally tight surface
+    // the headline MUST end up below its preferred font size, and it MUST
+    // still be a real, defined font size. If either of these ever becomes
+    // false (e.g. a future change makes the surface roomier, or breaks
+    // font resolution entirely), this test now fails loudly instead of
+    // silently skipping its real assertion below.
+    expect(headline?.fontSize).toBeDefined();
+    expect(headline!.fontSize!).toBeLessThan(headlineSpec.text!.preferredFontSize - 0.01);
+
+    expect(
+      layout.degradation.some(d => d.operation === 'resize' && d.elementId === 'headline'),
+    ).toBe(true);
   });
 });

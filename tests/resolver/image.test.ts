@@ -13,9 +13,14 @@ it('preserves product image aspect ratio', () => {
     const layout = resolveLayout(adSpec, s);
     const productImage = layout.elements.find(e => e.id === 'product-image');
 
-    if (!productImage?.visible) continue;
+    // product-image is priority 1 and non-droppable (see adSpec.ts) on
+    // every shipped surface, so it must be visible everywhere. Asserting
+    // this — instead of silently `continue`-ing past a surface where it
+    // isn't — turns "the hero image got dropped somewhere it shouldn't
+    // have" into a loud failure instead of a quietly skipped check.
+    expect(productImage?.visible, `product-image should be visible on ${s.name}`).toBe(true);
 
-    const resolvedRatio = productImage.width / productImage.height;
+    const resolvedRatio = productImage!.width / productImage!.height;
     expect(Math.abs(resolvedRatio - 1.35)).toBeLessThan(0.09);
   }
 });
