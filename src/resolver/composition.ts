@@ -1,10 +1,7 @@
-import type { AdElementSpec } from '../types/ad';
-import type { SurfaceProfile } from '../types/surface';
 import type { Composition } from '../types/layout';
 
 /**
- * Enumerates every composition family the resolver should try for a given
- * surface + element set.
+ * Enumerates every composition family the resolver should try.
  *
  * This used to also rank the three compositions with its own
  * aspect-ratio/content-pressure heuristic before returning them. That
@@ -17,18 +14,11 @@ import type { Composition } from '../types/layout';
  *
  * `score()` in resolver.ts is now the single source of truth for which
  * composition wins. This function's only job is to generate the candidate
- * set for it to evaluate. `surface` and `elements` are kept as parameters
- * (rather than removed) so a future surface-aware pruning step — e.g.
- * skipping an obviously-impossible composition before doing a full
- * placement pass, as a performance optimization — has an obvious place to
- * live without changing this function's call sites.
+ * set for it to evaluate. It previously accepted `surface` and `elements`
+ * parameters reserved for a hypothetical future surface-aware pruning step,
+ * but they were never read — an unused API surface is worse than adding the
+ * parameters back if and when a real pruning optimization is implemented.
  */
-export function candidates(
-  surface: SurfaceProfile,
-  elements: AdElementSpec[],
-): Composition[] {
-  void surface;
-  void elements;
-
+export function candidates(): Composition[] {
   return ['vertical', 'horizontal', 'mixed'];
 }

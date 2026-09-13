@@ -52,8 +52,7 @@ export const adSpec = defineAd({
       // A real, renderable image URL. The resolver never inspects this
       // value (it only uses `image.aspectRatio` etc. for layout math) —
       // the renderer passes it straight to an <img src>.
-      content:
-        'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&h=444&fit=crop',
+      content: 'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&h=444&fit=crop',
       priority: 1,
       minWidth: 80,
       minHeight: 80,
@@ -129,15 +128,15 @@ export const adSpec = defineAd({
       preferredWidth: 110,
       preferredHeight: 34,
       flexibility: {
-      resize: true,
-      reposition: true,
-      truncate: false,
-      droppable: true,
-    },
-    // Matches .ad-element.logo's actual rendered text color (color:#fff
-    // in styles.css / '#ffffff' fillStyle in renderCanvas.ts). See
-    // broadcastLowerThird's backgroundColor in surfaces.ts.
-    foregroundColor: '#ffffff',
+        resize: true,
+        reposition: true,
+        truncate: false,
+        droppable: true,
+      },
+      // Matches .ad-element.logo's actual rendered text color (color:#fff
+      // in styles.css / '#ffffff' fillStyle in renderCanvas.ts). See
+      // broadcastLowerThird's backgroundColor in surfaces.ts.
+      foregroundColor: '#ffffff',
     },
   ],
 });

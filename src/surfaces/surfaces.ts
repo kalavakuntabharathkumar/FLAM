@@ -24,23 +24,23 @@ export const surfaces: SurfaceProfile[] = [
     touchOnly: true,
   },
   {
-  id: 'broadcastLowerThird',
-  name: 'Broadcast Lower Third',
-  width: 1920,
-  height: 250,
-  safeArea: { top: 16, right: 48, bottom: 16, left: 48 },
-  minTapTarget: 0,
-  minTextSize: 32,
-  viewingDistance: 'far',
-  touchOnly: false,
-  // Matches the logo's own rendered pill colors (.ad-element.logo in
-  // styles.css: background:#111, color:#fff) so LOW_CONTRAST_BRANDING
-  // actually checks the real color pair the branding mark is drawn
-  // with, not an arbitrary stand-in. Ratio is ~18.9:1 — comfortably
-  // passes WCAG AA (4.5:1) — this fires the check for real without
-  // changing anything about the shipped demo's behavior or appearance.
-  backgroundColor: '#111111',
-},
+    id: 'broadcastLowerThird',
+    name: 'Broadcast Lower Third',
+    width: 1920,
+    height: 250,
+    safeArea: { top: 16, right: 48, bottom: 16, left: 48 },
+    minTapTarget: 0,
+    minTextSize: 32,
+    viewingDistance: 'far',
+    touchOnly: false,
+    // Matches the logo's own rendered pill colors (.ad-element.logo in
+    // styles.css: background:#111, color:#fff) so LOW_CONTRAST_BRANDING
+    // actually checks the real color pair the branding mark is drawn
+    // with, not an arbitrary stand-in. Ratio is ~18.9:1 — comfortably
+    // passes WCAG AA (4.5:1) — this fires the check for real without
+    // changing anything about the shipped demo's behavior or appearance.
+    backgroundColor: '#111111',
+  },
   {
     id: 'retailKiosk',
     name: 'Retail Kiosk',
