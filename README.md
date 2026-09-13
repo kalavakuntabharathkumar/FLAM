@@ -13,6 +13,10 @@ npm run dev
 
 Open the localhost URL printed by Vite.
 
+## Requirements
+
+Node.js 18+ (developed and tested on Node 22)
+
 ## Verification commands
 
 ```bash
@@ -79,7 +83,7 @@ Degradation only produces four outcomes — resize, reposition, truncate, hide. 
 
 ## Time spent
 
-About 3 days, roughly 13 hours a day, plus another 6 hours on top of that — call it around 45 hours total.
+About 3 days, roughly 9 hours a day (~27 hours) on core implementation, plus an additional ~7 hours specifically on self-review and testing to catch edge cases and confirm everything worked as claimed — around 34 hours total.
 
 ## AI disclosure
 
