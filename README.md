@@ -63,6 +63,8 @@ The fifth and sixth surfaces use the same resolver without a new surface-specifi
 
 `viewingDistance` (`'near' | 'far'`) is a real, load-bearing constraint, not a label: far-viewing surfaces (currently only Broadcast Lower Third) get proportionally wider gaps between elements than a near surface of the same pixel size, independent of `minTextSize`. See ARCHITECTURE.md §1 for why spacing and glyph size are treated as two separate legibility constraints.
 
+Mobile Portrait and Mobile Landscape both resolve to a **vertical** composition despite their different aspect ratios. This is not uniform scaling passed off as adaptation — `mixed` is generated and fully evaluated for both surfaces, exactly as it is for every other surface, and it genuinely fails on Mobile Landscape: at 480×320 its two-column split leaves only a 110px-wide right column for headline/price/CTA/logo, which pushes the headline below its minimum readable font size and clips it (`BELOW_MIN_TEXT_SIZE`, `TEXT_CLIPPING`). Vertical is the only composition that resolves to a valid, non-clipping layout at that aspect ratio, so it wins on scoring even though `mixed` is actually more area-efficient (~83% vs ~41% safe-area usage) — the scorer weights validity far above efficiency by design. The full numeric trace is in ARCHITECTURE.md §3.
+
 ## Content and QA
 
 The demo includes headline, product image, price, CTA, and FLAM AI logo content. Text sizing is calculated from the final candidate width, image geometry preserves aspect ratio, CTA sizing respects touch requirements, and degradation triggers a fresh resolution pass.
@@ -80,6 +82,8 @@ Text measurement is real in one place and heuristic everywhere else. I used the 
 The accessibility contrast check in contrast.ts is opt-in — it only runs when a surface sets backgroundColor and a branding element sets foregroundColor. broadcastLowerThird and the logo element now set exactly the colors the logo pill is already rendered with (.ad-element.logo in styles.css: background #111, color #fff), so the check genuinely fires against real demo content on that surface, not just in isolated unit tests. It passes comfortably (~18.9:1 against the 4.5:1 WCAG AA minimum), so the logo is never forced to hide or reposition because of it. The other shipped surfaces still don't set these fields, so the check simply doesn't run for them — that's still opt-in by design, not a gap.
 
 Degradation only produces four outcomes — resize, reposition, truncate, hide. There's no partial-content strategy beyond that, e.g. no wrapping a headline into fewer words instead of truncating it, and no combining two smaller degradations instead of one larger one.
+
+Mobile Portrait and Mobile Landscape resolving to the same composition family is a scoring outcome, not a shortcut — see "Surfaces" above and ARCHITECTURE.md §3 for the numeric reason `mixed` fails specifically at Mobile Landscape's 480×320.
 
 ## Time spent
 
