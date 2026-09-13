@@ -2,11 +2,14 @@
  * WCAG 2.x relative-luminance contrast ratio utility.
  *
  * This exists purely to support the OPTIONAL `LOW_CONTRAST_BRANDING`
- * validation in validator.ts. It has zero effect on any existing surface
- * or spec: both `SurfaceProfile.backgroundColor` and
- * `BrandingImageElementSpec.foregroundColor` are optional fields that none
- * of the five shipped surfaces / the shipped adSpec set, so the check this
- * enables is a no-op for every currently-resolved layout.
+ * validation in validator.ts. Both `SurfaceProfile.backgroundColor` and
+ * `BrandingImageElementSpec.foregroundColor` are optional fields — the
+ * check only runs when both are set. `broadcastLowerThird` sets
+ * `backgroundColor: '#111111'` and the logo element sets
+ * `foregroundColor: '#ffffff'`, so this check genuinely fires against real
+ * demo content on that surface (~18.9:1, comfortably above the 4.5:1 WCAG
+ * AA minimum). The other shipped surfaces don't set these fields, so the
+ * check remains a no-op for them — that's opt-in by design, not an oversight.
  */
 
 function srgbToLinear(channel: number): number {
