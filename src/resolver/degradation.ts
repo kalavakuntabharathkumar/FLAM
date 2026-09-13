@@ -61,19 +61,11 @@ export function nextDegradation(specs: AdElementSpec[], state: DegradeState) {
   for (const p of priorities) {
     const atThisPriority = byPriorityDesc.filter(e => e.priority === p);
 
-    const droppable = atThisPriority.find(
-      e => !state.hidden.has(e.id) && e.flexibility.droppable,
-    );
-
-    if (droppable) {
-      state.hidden.add(droppable.id);
-      return {
-        operation: 'hide' as const,
-        elementId: droppable.id,
-        reason: `Dropped priority ${p} droppable content before compromising higher-priority elements.`,
-      };
-    }
-
+    // Truncation is a cheaper, less destructive operation than hiding an
+    // element outright (see DegradationOperation's severity ladder:
+    // resize < reposition < truncate < hide), so it is tried first within
+    // a tier. Only when no truncatable candidate remains at this priority
+    // does the resolver fall back to dropping a droppable element.
     const truncatable = atThisPriority.find(
       e =>
         !state.trunc.has(e.id) &&
@@ -87,6 +79,19 @@ export function nextDegradation(specs: AdElementSpec[], state: DegradeState) {
         operation: 'truncate' as const,
         elementId: truncatable.id,
         reason: `Truncated priority ${p} content before compromising higher-priority elements.`,
+      };
+    }
+
+    const droppable = atThisPriority.find(
+      e => !state.hidden.has(e.id) && e.flexibility.droppable,
+    );
+
+    if (droppable) {
+      state.hidden.add(droppable.id);
+      return {
+        operation: 'hide' as const,
+        elementId: droppable.id,
+        reason: `Dropped priority ${p} droppable content before compromising higher-priority elements.`,
       };
     }
   }
