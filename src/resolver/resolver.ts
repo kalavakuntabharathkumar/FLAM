@@ -202,6 +202,7 @@ export function resolveLayout(
   };
   const decisions: ResolvedLayout['degradation'] = [];
   let final: ResolvedLayout | undefined;
+  let lastAttempt: ResolvedLayout | undefined;
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     const layoutCandidates = candidates()
@@ -219,6 +220,7 @@ export function resolveLayout(
       .sort((a, b) => b.score - a.score);
 
     const winner = layoutCandidates[0];
+    if (winner) lastAttempt = winner;
     if (winner?.validation.valid) {
       final = winner;
       break;
@@ -287,7 +289,28 @@ export function resolveLayout(
     decisions.push(degradation);
   }
 
-  if (!final) throw new Error('No candidate layout could be generated.');
+  if (!final) {
+    // Surfaced elements marked `droppable: false` (e.g. price, cta) are a
+    // deliberate spec-level guarantee: the resolver will never hide them to
+    // force a fit. If the surface's safe area is smaller than the combined
+    // minimum footprint of every non-droppable element, no valid layout can
+    // exist without breaking that guarantee — this is a genuine surface/spec
+    // mismatch, not a resolver defect. Name the offending elements instead
+    // of throwing an opaque message, so this is diagnosable live.
+    const blocking = (lastAttempt?.validation.issues ?? [])
+      .filter((i) => i.code === 'MISSING_REQUIRED_ELEMENT' || i.code === 'OVERLAP' || i.code === 'TEXT_CLIPPING' || i.code === 'BELOW_MIN_TAP_TARGET' || i.code === 'BELOW_MIN_TEXT_SIZE')
+      .map((i) => `${i.elementId} (${i.code})`);
+
+    const detail =
+      blocking.length > 0
+        ? `Blocking issues: ${[...new Set(blocking)].join(', ')}.`
+        : 'No specific issues were captured from the last attempted layout.';
+
+    throw new Error(
+      `No valid layout could be generated for surface "${surface.id}" (${surface.width}x${surface.height}). ` +
+        `The safe area is too small to fit every element marked non-droppable without hiding, overlapping, or clipping it. ${detail}`,
+    );
+  }
   final.degradation = [...decisions, ...resizeDecisions(ad, final)];
   final.score = score(final);
   return final;
