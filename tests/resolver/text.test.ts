@@ -22,10 +22,20 @@ const extremePriceSpec: AdSpecification = {
 it('extreme price never escapes its box', () => {
   for (const s of surfaces) {
     const l = resolveLayout(extremePriceSpec, s);
+
+    // The resolver's own validator already checks TEXT_OVERFLOW/TEXT_CLIPPING
+    // for every visible text element — asserting overall validity here is
+    // the real "never escapes its box" guarantee, not just a >0 dimension
+    // check that would pass even for a badly clipped box.
+    expect(l.validation.valid, `resolved layout for ${s.name} should be valid`).toBe(true);
+
     const p = l.elements.find(e => e.id === 'price');
-    if (p?.visible) {
-      expect(p.width).toBeGreaterThan(0);
-      expect(p.height).toBeGreaterThan(0);
-    }
+
+    // price is priority 2 and non-droppable (flexibility.droppable: false
+    // in adSpec.ts), so it must remain visible on every surface even with
+    // this deliberately extreme content — it may truncate, but never hide.
+    expect(p?.visible, `price should be visible on ${s.name}`).toBe(true);
+    expect(p!.width).toBeGreaterThan(0);
+    expect(p!.height).toBeGreaterThan(0);
   }
 });
