@@ -2,6 +2,8 @@
 
 A React + TypeScript + Vite demonstration of a framework-independent, constraint-based adaptive layout engine. One shared `AdSpecification` is resolved independently against four required surfaces plus an intentionally unknown fifth surface (`713 × 287`).
 
+**Live demo:** https://flam-adaptive-ads.vercel.app
+
 ## Run
 
 ```bash
@@ -23,8 +25,19 @@ npm run test:all
 
 `test:all` is the complete local verification pipeline.
 
+## Project structure
 
-**Live demo:** https://flam-adaptive-ads.vercel.app
+The assignment's example showed a flat file list (`spec.ts`, `surfaces.ts`, `resolver.ts`, `render-dom.ts`, `App.tsx`). I organized this submission into folders instead, for clearer separation of concerns:
+
+- `src/spec/` — the ad specification
+- `src/surfaces/` — surface profiles
+- `src/resolver/` — the resolution algorithm, split into focused files (`composition.ts`, `constraints.ts`, `degradation.ts`, `placement.ts`, `validator.ts`, `resolver.ts`, and others)
+- `src/rendering/` — DOM and Canvas renderers
+- `src/types/` — shared type definitions
+- `src/components/` — UI pieces like the surface picker
+
+This still satisfies the assignment's actual requirement — clean separation between spec → resolve → layout → render — while making the resolver itself easier to navigate than one large file.
+
 
 ## Architecture
 
